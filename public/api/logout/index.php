@@ -27,8 +27,6 @@ setcookie(
 writeLog("[Success] Refresh token cookie cleared during logout.");
 
 // Clearing CSRF token
-// ini_set('session.cookie_path', '/');
-// ini_set('session.cookie_domain', 'biblioteket.globalgathering.no');
 session_save_path(ROOT . '/tmp'); // Set your custom session path if needed
 session_start();
 $sessid = session_id();
