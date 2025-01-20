@@ -1,0 +1,6 @@
+{
+    "your_username": {
+        "password": "Your hashed password. Write your preferred password here, and run hash.php to hash it.",
+        "role": "admin"
+    },
+}

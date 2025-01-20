@@ -1,0 +1,1 @@
+Put the files from your generated admin dashboard in this folder

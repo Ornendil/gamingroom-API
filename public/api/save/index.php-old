@@ -1,0 +1,84 @@
+<?php
+
+// Save session
+
+require_once __DIR__ . '/../../../config.php';
+
+//Logging
+require_once ROOT . '/logging.php';
+
+// Import necessary headers, likely used for setting up API response headers like Content-Type or CORS.
+require_once ROOT . '/apiHeaders.php';
+
+// Include rate limit
+require_once ROOT . '/rateLimit.php';
+
+// Include CSRF validation
+require_once ROOT . '/csrf/validate.php';
+
+// Include JWT Authorization
+require_once ROOT . '/auth.php';
+
+// require_once ROOT . '/passwordFunction.php';
+
+// Connect to SQLite database
+$db = new SQLite3(ROOT . '/gamingrom.db');
+
+// Create table if it doesn't exist
+$db->exec("CREATE TABLE IF NOT EXISTS gaming_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, last_updated INTEGER, computer TEXT, time_slot INTEGER, fra TEXT, til TEXT, navn TEXT, lnr TEXT, status TEXT)");
+
+// Get JSON data from POST request
+$json_data = file_get_contents('php://input');
+$decoded_data = json_decode($json_data, true);
+
+// Extract 'data' from the decoded JSON
+$data = $decoded_data['data'] ?? [];
+
+// Current date
+$current_date = date('Y-m-d');
+
+// Prepare an SQL statement with placeholders for inserting new sessions
+$stmt = $db->prepare('INSERT INTO gaming_sessions (date, last_updated, computer, time_slot, fra, til, navn, lnr, status) VALUES (:date, :last_updated, :computer, :time_slot, :fra, :til, :navn, :lnr, :status)');
+
+// Iterate over JSON data to insert into SQLite
+foreach ($data as $session) {
+    // Bind values to placeholders
+    $stmt->bindValue(':date', $current_date, SQLITE3_TEXT);
+    $stmt->bindValue(':last_updated', time(), SQLITE3_INTEGER);
+    $stmt->bindValue(':computer', $session['computer'], SQLITE3_TEXT);
+    $stmt->bindValue(':time_slot', $session['time_slot'], SQLITE3_INTEGER);
+    $stmt->bindValue(':fra', $session['fra'], SQLITE3_TEXT);
+    $stmt->bindValue(':til', $session['til'], SQLITE3_TEXT);
+    $stmt->bindValue(':navn', $session['navn'], SQLITE3_TEXT);
+    $stmt->bindValue(':lnr', isset($session['lnr']) && $session['lnr'] ? $session['lnr'] : $session['navn'], SQLITE3_TEXT);
+    // $stmt->bindValue(':passord', getUniquePassword(), SQLITE3_TEXT);
+    $stmt->bindValue(':status', $session['status'], SQLITE3_TEXT);
+
+//     // Execute the prepared statement
+    $stmt->execute();
+}
+
+// Delete old records (older than 7 days)
+$delete_query = "DELETE FROM gaming_sessions WHERE date < strftime('%Y-%m-%d', 'now', '-7 day')";
+$db->exec($delete_query);
+
+
+
+// Fetch the sessions for the current date after inserting new ones
+$result = $db->query("SELECT * FROM gaming_sessions WHERE date = :current_date");
+$current_sessions_stmt = $db->prepare("SELECT * FROM gaming_sessions WHERE date = :current_date");
+$current_sessions_stmt->bindValue(':current_date', $current_date, SQLITE3_TEXT);
+$result = $current_sessions_stmt->execute();
+
+$sessions = [];
+while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    $sessions[] = $row;
+}
+
+// Close the database
+$db->close();
+
+// Send response back to client
+echo json_encode(['status' => 'success', 'sessions' => $sessions]);
+
+?>
