@@ -1,5 +1,5 @@
 <?php
-$rootUrl = 'https://biblioteket.globalgathering.no';
+$rootUrl = 'https://yourwebsite.com';
 header('Content-Type: application/json');
 // error_log(print_r($_COOKIE, true)); // Log all cookies
 
