@@ -31,7 +31,7 @@ if (isset($_GET['last_checked']) && !empty($_GET['last_checked'])) {
 }
 
 
-$allowedComputers = ["PC1", "PC2", "PC3", "PC4", "XBOX1", "XBOX2"];
+$allowedComputers = ["PC1", "PC2", "PC3", "PC4", "XBOX1", "XBOX2", "PSV1", "PSV2", "PSH1", "PSH2"];
 if (isset($_GET['computer']) && !empty($_GET['computer']) && in_array($_GET['computer'], $allowedComputers)) {
     $query .= ' AND computer = :computer';
     $stmt->bindValue(':computer', $_GET['computer'], SQLITE3_TEXT);
