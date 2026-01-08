@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Delete session
 
 require_once __DIR__ . '/../../../config.php';
@@ -19,61 +21,76 @@ require_once ROOT . '/csrf/validate.php';
 // Include JWT Authorization
 require_once ROOT . '/auth.php';
 
-// Connect to SQLite database
-$db = new SQLite3(ROOT . '/gamingrom.db');
-
-if (!$db) {
-    die("Connection failed: " . $db->lastErrorMsg());
+// DB
+if (!file_exists($DB_PATH)) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database missing']);
+    exit;
 }
 
-// Check if the necessary DELETE data is present
-$id = $_POST['id'] ?? null;
+$db = new SQLite3($DB_PATH);
+if (!$db) {
+    writeLog("DB connection failed on delete. DB_PATH=" . $DB_PATH, "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
+    exit;
+}
 
-if ($id !== null) {
-    // Check if the session ID exists
-    $checkStmt = $db->prepare('SELECT COUNT(*) FROM gaming_sessions WHERE id = :id');
-    $checkStmt->bindValue(':id', $id, SQLITE3_INTEGER);
-    $countResult = $checkStmt->execute()->fetchArray();
-    
-    if ($countResult[0] == 0) {
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Session ID does not exist.', 
-            'id' => $id
-        ]);
-        exit;
+// Read input (form or JSON)
+$input = $_POST;
+if (empty($input)) {
+    $raw = file_get_contents('php://input');
+    $json = json_decode($raw, true);
+    if (is_array($json)) {
+        $input = $json;
     }
+}
 
-    // Prepare an SQL statement to delete the session
-    $stmt = $db->prepare('DELETE FROM gaming_sessions WHERE id = :id');
+$id = $input['id'] ?? null;
 
-    // Bind the ID value to the placeholder
-    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+if ($id === null) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Missing required parameter: id.']);
+    $db->close();
+    exit;
+}
 
-    // Execute the prepared statement
-    $result = $stmt->execute();
+if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid id']);
+    $db->close();
+    exit;
+}
+$id = (int)$id;
 
-    if ($result) {
-        echo json_encode([
-            'status' => 'success', 
-            'message' => 'Session deleted successfully.', 
-            'id' => $id]);
+// Recommended safety: only delete today's sessions
+$current_date = date('Y-m-d');
+
+$stmt = $db->prepare('DELETE FROM gaming_sessions WHERE id = :id');
+if (!$stmt) {
+    writeLog("Failed to prepare delete statement: " . $db->lastErrorMsg(), "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
+    $db->close();
+    exit;
+}
+
+$stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+$stmt->bindValue(':date', $current_date, SQLITE3_TEXT);
+
+$res = $stmt->execute();
+
+if ($res) {
+    if ($db->changes() === 0) {
+        http_response_code(404);
+        echo json_encode(['status' => 'error', 'message' => 'Session not found', 'id' => $id]);
     } else {
-        echo json_encode([
-            'status' => 'error', 
-            'message' => 'Failed to delete session.', 
-            'id' => $id,
-            'errorInfo' => $db->lastErrorMsg()
-        ]);
+        echo json_encode(['status' => 'success', 'message' => 'Session deleted successfully.', 'id' => $id]);
     }
 } else {
-    echo json_encode([
-        'status' => 'error', 
-        'message' => 'Missing required parameter: id.'
-    ]);
+    writeLog("Failed to delete session id=$id: " . $db->lastErrorMsg(), "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to delete session.', 'id' => $id]);
 }
 
-// Close the database
 $db->close();
-
-?>

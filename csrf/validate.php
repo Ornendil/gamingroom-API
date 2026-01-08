@@ -1,18 +1,18 @@
 <?php
-session_save_path(ROOT . '/tmp'); // Set your custom session path if needed
-session_start();
-// writeLog("[Debug] Session started with ID: " . session_id());
+// Assumes session is already started in config.php
 
-// Extract the CSRF token from the request headers
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    writeLog("CSRF validate: session not started", "Error");
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Server misconfiguration']);
+    exit;
+}
+
 $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 
-// Validate the CSRF token
-if (empty($csrfToken) || $csrfToken !== $_SESSION['csrf_token']) {
-    writeLog("[Error] CSRF token validation failed for session ID: " . session_id());
-    writeLog("[Error] CSRF token from request: " . $csrfToken);
-    writeLog("[Error] CSRF token from session: " . ($_SESSION['csrf_token'] ?? 'not set'));
-    http_response_code(403); // Forbidden
+if (empty($csrfToken) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+    writeLog("CSRF token validation failed for session ID: " . session_id(), "ERROR");
+    http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'CSRF token validation failed']);
     exit;
 }
-?>

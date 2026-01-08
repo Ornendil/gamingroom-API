@@ -12,10 +12,25 @@ require_once ROOT . '/apiHeaders.php';
 require_once ROOT . '/jwt/generate.php'; // Include the JWT generation script
 
 // Define the path to the users data file.
-$userFile = ROOT . '/users.json';
+$userFile = $USERS_PATH;
 
-// Read the user data from the file and decode it into an associative array. If decoding fails, use an empty array as a fallback.
-$userData = json_decode(file_get_contents($userFile), true) ?? [];
+// Safety: verify users file is readable
+if (!is_readable($userFile)) {
+    writeLog("users.json not readable: " . $userFile . " (tenant: " . ($TENANT_SLUG ?? 'unknown') . ")", "Error");
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Server misconfiguration']);
+    exit;
+}
+
+// Read the user data from the file and decode it into an associative array
+$userData = json_decode(file_get_contents($userFile), true);
+if (!is_array($userData)) {
+    writeLog("users.json invalid JSON: " . $userFile, "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Server misconfiguration']);
+    exit;
+}
+
 
 // Check if the request method is POST, indicating that the script is handling a login attempt.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -24,8 +39,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
+    if ($username === '' && $password === '') {
+        $raw = file_get_contents('php://input');
+        $json = json_decode($raw, true);
+        if (is_array($json)) {
+            $username = $json['username'] ?? '';
+            $password = $json['password'] ?? '';
+        }
+    }
+
+    // Optional: log what tenant and username was attempted (not password)
+    writeLog("Login attempt tenant=" . ($TENANT_SLUG ?? 'unknown') . " user=" . $username, "Info")
+
+
     // Verify if the provided username exists in the user data and the password matches using password_verify.
-    if (isset($userData[$username]) && password_verify($password, $userData[$username]["password"])) {
+    if (
+        isset($userData[$username]) &&
+        isset($userData[$username]['password']) &&
+        password_verify($password, $userData[$username]['password'])
+    ) {
 
         // Generate JWTs for the user
         $tokens = generateJWTs($username);
@@ -45,10 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]
             )
         ) {
-            writeLog("[Success] Refresh token cookie set successfully for user: " . $username);
+            writeLog("Refresh token cookie set successfully for user: " . $username, "Success")
             // writeLog("HTTP Headers: " . print_r(headers_list(), true));
         } else {
-            writeLog("[Error] Failed to set refresh token cookie for user: " . $username);
+            writeLog("Failed to set refresh token cookie for user: " . $username, "Error")
         }
         
 

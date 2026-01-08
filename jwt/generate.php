@@ -1,52 +1,51 @@
 <?php
+declare(strict_types=1);
 
 // Load the Secret Key
-$secretKey = file_get_contents(ROOT . '/jwt/secretkey.txt');
+$secretKey = file_get_contents($JWT_SECRET);
 
-function generateJWTs($username) {
+function base64UrlEncode(string $data): string {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
 
+function generateJWTs(string $username): array {
     global $secretKey;
-    
-    // Step 1: Define the Header
+
     $header = json_encode([
         "alg" => "HS256",
         "typ" => "JWT"
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
+
+    $now = time();
 
     $accessTokenPayload = json_encode([
         "sub" => $username,
-        "iat" => time(),
-        "exp" => time() + 1800  // Access Token expires in 30 minutes
-    ]);
+        "iat" => $now,
+        "exp" => $now + 1800,
+        "token_use" => "access"
+    ], JSON_UNESCAPED_UNICODE);
+
     $refreshTokenPayload = json_encode([
         "sub" => $username,
-        "iat" => time(),
-        "exp" => time() + 604800  // Refresh Token expires in 1 week
-    ]);
-
-    // Function to Base64URL Encode
-    function base64UrlEncode($data) {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
+        "iat" => $now,
+        "exp" => $now + 604800,
+        "token_use" => "refresh"
+    ], JSON_UNESCAPED_UNICODE);
 
     $base64Header = base64UrlEncode($header);
     $base64AccessTokenPayload = base64UrlEncode($accessTokenPayload);
     $base64RefreshTokenPayload = base64UrlEncode($refreshTokenPayload);
 
-    // Create the Signature
     $accessTokenSignature = hash_hmac('sha256', $base64Header . "." . $base64AccessTokenPayload, $secretKey, true);
     $refreshTokenSignature = hash_hmac('sha256', $base64Header . "." . $base64RefreshTokenPayload, $secretKey, true);
 
-    // Base64URL Encode the Signature
     $base64AccessTokenSignature = base64UrlEncode($accessTokenSignature);
     $base64RefreshTokenSignature = base64UrlEncode($refreshTokenSignature);
 
-    // Concatenate Header, Payload, and Signature to Create JWT
     $accessToken = $base64Header . "." . $base64AccessTokenPayload . "." . $base64AccessTokenSignature;
     $refreshToken = $base64Header . "." . $base64RefreshTokenPayload . "." . $base64RefreshTokenSignature;
 
-    // Return the Tokens as an Associative Array
-    writeLog("[Success] Generated JWT tokens. Access token: " . $accessToken . " and refresh token: " . $refreshToken);
+    writeLog("Generated JWT tokens for user: " . $username, "Success");
+
     return ['accessToken' => $accessToken, 'refreshToken' => $refreshToken];
 }
-?>

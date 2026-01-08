@@ -5,7 +5,7 @@ $authHeader = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATI
 
 // Step 2: Check if Authorization Header Exists
 if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-    writeLog("[Error] Authorization token not provided or invalid format.");
+    writeLog("Authorization token not provided or invalid format.", "ERROR");
     http_response_code(401); // Unauthorized
     echo json_encode(['status' => 'error', 'message' => 'Authorization token not provided or invalid format']);
     exit;
@@ -19,7 +19,7 @@ require_once ROOT . '/jwt/validate.php';
 $validationResult = validateToken($jwt);
 
 if ($validationResult['status'] !== 'success') {
-    writeLog("[Error] Unauthorized JWT validation. " . $validationResult['message']);
+    writeLog("Unauthorized JWT validation. " . $validationResult['message'], 'ERROR');
     http_response_code(401); // Unauthorized
     echo json_encode(['status' => 'error', 'message' => $validationResult['message']]);
     exit;

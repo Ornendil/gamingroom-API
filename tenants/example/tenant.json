@@ -1,0 +1,30 @@
+{
+  "slug": "example",
+  "displayName": "Example Tenant",
+  "retentionDays": 1,
+  "allowedOrigins": [
+    "https://example.gamingrom.exampledomain.no"
+  ],
+  "authMode": "lnr_or_name",
+  "slotMinutes": 15,
+  "defaultSessionSlots": 2,
+  "devices": [
+    {
+      "id": "pc1",
+      "label": "PC 1",
+      "type": "pc"
+    },
+  ],
+  "openingHours": {
+    "monday": null,
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": {
+      "open": "12:00",
+      "close": "19:00"
+    },
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  }
+}

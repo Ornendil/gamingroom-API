@@ -1,99 +1,106 @@
 <?php
+declare(strict_types=1);
 
-// Get all sessions for the day
+// Get sessions for today (public display)
 
 require_once __DIR__ . '/../../../config.php';
 require_once ROOT . '/logging.php';
-// writeLog("[Data fetch] Config loaded.");
 require_once ROOT . '/apiHeaders.php';
-// writeLog("[Data fetch] API headers loaded.");
 require_once ROOT . '/rateLimit.php';
-// writeLog("[Data fetch] Rate limit set.");
 
-// Connect to SQLite database
-$db = new SQLite3(ROOT . '/gamingrom.db');
+// DB
+if (!file_exists($DB_PATH)) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database missing']);
+    exit;
+}
+
+$db = new SQLite3($DB_PATH);
 if (!$db) {
-    writeLog("[Error] Database connection failed on data fetch for public screen.");
-    http_response_code(500);  // Set a proper HTTP response code
-    die(json_encode(['status' => 'error', 'message' => 'Database connection failed']));
+    writeLog("Database connection failed on /api/sessions/. DB_PATH=" . $DB_PATH, "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
+    exit;
 }
 
-$query = 'SELECT * FROM gaming_sessions WHERE date = :currentDate';
+$current_date = date('Y-m-d');
 
-if (isset($_GET['last_checked']) && !empty($_GET['last_checked'])) {
+// Build query + params
+$query = 'SELECT id, computer, time_slot, fra, til, navn, lnr, last_updated
+          FROM gaming_sessions
+          WHERE date = :currentDate';
+$params = [
+    ':currentDate' => [$current_date, SQLITE3_TEXT],
+];
+
+// last_checked filter
+if (isset($_GET['last_checked']) && $_GET['last_checked'] !== '') {
     $lastCheckedTimestamp = $_GET['last_checked'];
-    if (filter_var($lastCheckedTimestamp, FILTER_VALIDATE_INT)) {
+    if (filter_var($lastCheckedTimestamp, FILTER_VALIDATE_INT) !== false) {
         $query .= ' AND last_updated > :lastChecked';
-        $stmt->bindValue(':lastChecked', $lastCheckedTimestamp, SQLITE3_INTEGER);
+        $params[':lastChecked'] = [(int)$lastCheckedTimestamp, SQLITE3_INTEGER];
     }
-} else {
-    $lastCheckedTimestamp = 0;
 }
 
-
-$allowedComputers = ["PC1", "PC2", "PC3", "PC4", "XBOX1", "XBOX2", "PSV1", "PSV2", "PSH1", "PSH2"];
-if (isset($_GET['computer']) && !empty($_GET['computer']) && in_array($_GET['computer'], $allowedComputers)) {
-    $query .= ' AND computer = :computer';
-    $stmt->bindValue(':computer', $_GET['computer'], SQLITE3_TEXT);
+// computer filter (normalize + validate)
+if (isset($_GET['computer']) && $_GET['computer'] !== '') {
+    $computer = strtolower(trim((string)$_GET['computer']));
+    if (in_array($computer, $ALLOWED_DEVICE_IDS, true)) {
+        $query .= ' AND computer = :computer';
+        $params[':computer'] = [$computer, SQLITE3_TEXT];
+    }
 }
 
-if (isset($_GET['id']) && !empty($_GET['id']) && filter_var($_GET['id'], FILTER_VALIDATE_INT)) {
+// id filter
+if (isset($_GET['id']) && $_GET['id'] !== '' && filter_var($_GET['id'], FILTER_VALIDATE_INT) !== false) {
     $query .= ' AND id = :id';
-    $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+    $params[':id'] = [(int)$_GET['id'], SQLITE3_INTEGER];
 }
 
 $query .= ' ORDER BY computer, time_slot';
 
-// Prepare the query
-$current_date = date('Y-m-d');
+// Prepare + bind
 $stmt = $db->prepare($query);
-$stmt->bindValue(':currentDate', $current_date, SQLITE3_TEXT);
+if (!$stmt) {
+    writeLog("Failed to prepare SQL on /api/sessions/: " . $db->lastErrorMsg(), "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
+    $db->close();
+    exit;
+}
 
-// Bind values based on the presence of POST parameters
-if ($lastCheckedTimestamp != 0) {
-    $stmt->bindValue(':lastChecked', $lastCheckedTimestamp, SQLITE3_INTEGER);
-}
-if (isset($_GET['computer']) && !empty($_GET['computer'])) {
-    $stmt->bindValue(':computer', $_GET['computer'], SQLITE3_TEXT);
-}
-if (isset($_GET['id']) && !empty($_GET['id'])) {
-    $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+foreach ($params as $key => [$val, $type]) {
+    $stmt->bindValue($key, $val, $type);
 }
 
 $results = $stmt->execute();
-
 if (!$results) {
-    writeLog("[Error] Database query failed on data fetch for public screen.");
-    http_response_code(500);  // Internal server error
-    die(json_encode(['status' => 'error', 'message' => 'Query failed']));
+    writeLog("Query failed on /api/sessions/: " . $db->lastErrorMsg(), "Error")
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Query failed']);
+    $db->close();
+    exit;
 }
 
-// Initialize empty array to hold the data
-$data = array();
-$maxEntries = 48;
+// Output
+$data = [];
+$maxEntries = 500;
 $count = 0;
 
-// Loop through each row in the database
 while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-    $data[] = array(
+    $data[] = [
         'id' => $row['id'],
         'computer' => $row['computer'],
+        'time_slot' => $row['time_slot'],
         'fra' => $row['fra'],
         'til' => $row['til'],
         'navn' => $row['navn'],
-        'status' => $row['status'],
-        'last_updated' => $row['last_updated']
-    );
-    $count++;
-    if ($count >= $maxEntries) {
-        break;
-    }
+        'lnr' => $row['lnr'],
+        'last_updated' => $row['last_updated'],
+    ];
+    if (++$count >= $maxEntries) break;
 }
 
-// Close the database
 $db->close();
 
-// Output the data as JSON
-// echo '{"data":'.json_encode($data, JSON_UNESCAPED_UNICODE).',"version":"0.5"}';
 echo json_encode($data, JSON_UNESCAPED_UNICODE);
-?>

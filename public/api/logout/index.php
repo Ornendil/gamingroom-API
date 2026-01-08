@@ -1,40 +1,52 @@
 <?php
+declare(strict_types=1);
 
 // Logout
 
 require_once __DIR__ . '/../../../config.php';
-
-//Logging
 require_once ROOT . '/logging.php';
-
-// Import necessary headers, likely used for setting up API response headers like Content-Type or CORS.
 require_once ROOT . '/apiHeaders.php';
+require_once ROOT . '/rateLimit.php';
+require_once ROOT . '/csrf/validate.php';
+require_once ROOT . '/auth.php';
 
-// Clear the refresh token cookie by setting it to expire in the past
+// Clear refresh token cookie (match original attributes!)
 setcookie(
     "refreshToken",
     "",
     [
-        'expires' => time() - 3600,   // Set expiry time in the past
-        'path' => '/',                // Same path as original
-        'secure' => true,             // Same security flags as the original
+        'expires'  => time() - 3600,
+        'path'     => '/',
+        'secure'   => true,
         'httponly' => true,
-        'samesite' => 'None'          // SameSite should match original setting
+        'samesite' => 'Strict'
+        // Do NOT set 'domain' unless you set it when creating the cookie
     ]
 );
 
-// Log the logout action for debugging
-writeLog("[Success] Refresh token cookie cleared during logout.");
+// Destroy session (config.php should already have started it)
+$sessid = (session_status() === PHP_SESSION_ACTIVE) ? session_id() : '';
+if (session_status() === PHP_SESSION_ACTIVE) {
+    $_SESSION = [];
+    session_unset();
+    session_destroy();
+}
 
-// Clearing CSRF token
-session_save_path(ROOT . '/tmp'); // Set your custom session path if needed
-session_start();
-$sessid = session_id();
-session_unset();
-session_destroy();
-writeLog("[Success] Session destroyed during logout. Session ID was " . $sessid);
+// Optionally clear the PHP session cookie in the browser too
+if (isset($_COOKIE[session_name()])) {
+    setcookie(
+        session_name(),
+        "",
+        [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]
+    );
+}
 
+writeLog("Logout completed. Session ID was " . ($sessid ?: 'none'), "Success")
 
-// Respond with a success message
-echo json_encode(['status' => 'success', 'message' => 'Logged out successfully']);
-?>
+echo json_encode(['status' => 'success', 'message' => 'Logged out successfully'], JSON_UNESCAPED_UNICODE);

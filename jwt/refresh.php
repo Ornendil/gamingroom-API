@@ -1,57 +1,107 @@
 <?php
+declare(strict_types=1);
 
-// Step 1: Load the Secret Key
-$secretKey = file_get_contents(ROOT . '/jwt/secretkey.txt');
+// Load the Secret Key (tenant-specific)
+$secretKey = file_get_contents($JWT_SECRET);
 
-// Step 2: Function to Validate and Refresh Tokens
-function refreshAccessToken($refreshToken) {
+function base64UrlDecode(string $data): string|false {
+    $remainder = strlen($data) % 4;
+    if ($remainder) {
+        $data .= str_repeat('=', 4 - $remainder);
+    }
+    return base64_decode(strtr($data, '-_', '+/'));
+}
+
+function base64UrlEncode(string $data): string {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+function refreshAccessToken(string $refreshToken): array {
     global $secretKey;
 
     try {
-        // Step 3: Split the JWT into Header, Payload, Signature
-        list($encodedHeader, $encodedPayload, $encodedSignature) = explode('.', $refreshToken);
-        
-        // Step 4: Decode the Payload
-        $decodedPayload = json_decode(base64_decode(strtr($encodedPayload, '-_', '+/')), true);
+        // Split token
+        $parts = explode('.', $refreshToken);
+        if (count($parts) !== 3) {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
 
-        // Step 5: Check if the Refresh Token has expired
-        if (isset($decodedPayload['exp']) && time() > $decodedPayload['exp']) {
-            writeLog("[Error] Couldn't refresh access token.");
-            writeLog("[Error] JWT Refresh token " . $refreshToken . " has expired on " . $decodedPayload['exp']);
+        [$encodedHeader, $encodedPayload, $encodedSignature] = $parts;
+
+        // Decode header/payload
+        $headerJson = base64UrlDecode($encodedHeader);
+        $payloadJson = base64UrlDecode($encodedPayload);
+
+        if ($headerJson === false || $payloadJson === false) {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
+
+        $header = json_decode($headerJson, true);
+        $payload = json_decode($payloadJson, true);
+
+        if (!is_array($header) || !is_array($payload)) {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
+
+        // Verify alg (defensive)
+        if (($header['alg'] ?? '') !== 'HS256') {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
+
+        // Verify signature
+        $data = $encodedHeader . '.' . $encodedPayload;
+        $expectedSignature = hash_hmac('sha256', $data, $secretKey, true);
+        $encodedExpectedSignature = base64UrlEncode($expectedSignature);
+
+        if (!hash_equals($encodedSignature, $encodedExpectedSignature)) {
+            writeLog("Refresh token signature invalid", "Error");
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
+
+        // Verify exp
+        if (!isset($payload['exp']) || !is_int($payload['exp'])) {
+            // If json_decode makes it float, accept numeric too:
+            if (!isset($payload['exp']) || !is_numeric($payload['exp'])) {
+                return ['status' => 'error', 'message' => 'Invalid refresh token'];
+            }
+            $payload['exp'] = (int)$payload['exp'];
+        }
+
+        if (time() > $payload['exp']) {
             return ['status' => 'error', 'message' => 'Refresh token has expired'];
         }
 
-        // Step 6: Create a New Access Token Payload
-        $accessTokenPayload = json_encode([
-            "sub" => $decodedPayload['sub'],  // Carry over the subject from the refresh token
-            "iat" => time(),
-            "exp" => time() + 1800  // Access Token expires in 30 minutes
-        ]);
-        
-        // Step 7: Function to Base64URL Encode Data
-        function base64UrlEncode($data) {
-            return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        // Verify subject
+        $sub = $payload['sub'] ?? null;
+        if (!is_string($sub) || $sub === '') {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
         }
 
-        // Step 8: Base64URL Encode Header and Payload for New Access Token
-        $base64AccessTokenPayload = base64UrlEncode($accessTokenPayload);
+        // Optional but recommended: enforce that this is a refresh token
+        // If you add "token_use":"refresh" when generating refresh tokens, enforce it here:
+        if (($payload['token_use'] ?? '') !== 'refresh') {
+            return ['status' => 'error', 'message' => 'Invalid refresh token'];
+        }
 
-        // Step 9: Reuse the Header from the Refresh Token
-        $base64Header = $encodedHeader;
-        
-        // Step 10: Create the New Access Token Signature
-        $accessTokenSignature = hash_hmac('sha256', $base64Header . "." . $base64AccessTokenPayload, $secretKey, true);
-        $base64AccessTokenSignature = base64UrlEncode($accessTokenSignature);
+        // Create new access token (consider setting token_use='access')
+        $newHeader = $encodedHeader; // reuse header
+        $newPayload = json_encode([
+            'sub' => $sub,
+            'iat' => time(),
+            'exp' => time() + 1800,
+            'token_use' => 'access'
+        ], JSON_UNESCAPED_UNICODE);
 
-        // Step 11: Concatenate Header, Payload, and Signature to Create the New Access Token
-        $newAccessToken = $base64Header . "." . $base64AccessTokenPayload . "." . $base64AccessTokenSignature;
+        $encodedNewPayload = base64UrlEncode($newPayload);
+        $newSig = hash_hmac('sha256', $newHeader . '.' . $encodedNewPayload, $secretKey, true);
+        $encodedNewSig = base64UrlEncode($newSig);
+
+        $newAccessToken = $newHeader . '.' . $encodedNewPayload . '.' . $encodedNewSig;
 
         return ['status' => 'success', 'accessToken' => $newAccessToken];
-    } catch (Exception $e) {
-        writeLog("[Error] Couldn't refresh access token.");
-        writeLog("[Error] Invalid refresh token: " . $refreshToken);
+
+    } catch (Throwable $e) {
+        writeLog("Refresh access token exception: " . $e->getMessage(), "Error");
         return ['status' => 'error', 'message' => 'Invalid refresh token'];
     }
 }
-
-?>
