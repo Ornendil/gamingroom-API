@@ -30,7 +30,7 @@ if (!file_exists($DB_PATH)) {
 
 $db = new SQLite3($DB_PATH);
 if (!$db) {
-    writeLog("Database connection failed on update/name. DB_PATH=" . $DB_PATH, "Error")
+    writeLog("Database connection failed on update/name. DB_PATH=" . $DB_PATH, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
     exit;
@@ -86,7 +86,7 @@ $stmt = $db->prepare('
 ');
 
 if (!$stmt) {
-    writeLog("Failed to prepare SQL statement on update/name: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare SQL statement on update/name: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -107,7 +107,7 @@ if ($res) {
         echo json_encode(['status' => 'success', 'id' => $id, 'navn' => $navn], JSON_UNESCAPED_UNICODE);
     }
 } else {
-    writeLog("Failed to update name for session: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to update name for session: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to update session.', 'id' => $id]);
 }

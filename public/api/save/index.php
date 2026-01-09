@@ -14,7 +14,7 @@ require_once ROOT . '/auth.php';
 if (!file_exists($DB_PATH)) {
     // If you create DB lazily, you can remove this check.
     // Keeping it makes misconfig obvious.
-    writeLog("DB missing on save. DB_PATH=" . $DB_PATH, "Error")
+    writeLog("DB missing on save. DB_PATH=" . $DB_PATH, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Database missing']);
     exit;
@@ -22,7 +22,7 @@ if (!file_exists($DB_PATH)) {
 
 $db = new SQLite3($DB_PATH);
 if (!$db) {
-    writeLog("DB connection failed on save. DB_PATH=" . $DB_PATH, "Error")
+    writeLog("DB connection failed on save. DB_PATH=" . $DB_PATH, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
     exit;
@@ -117,7 +117,7 @@ $stmt = $db->prepare('
 ');
 
 if (!$stmt) {
-    writeLog("Failed to prepare INSERT on save: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare INSERT on save: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -135,7 +135,7 @@ $stmt->bindValue(':lnr', $lnr, SQLITE3_TEXT);
 
 $res = $stmt->execute();
 if (!$res) {
-    writeLog("Failed to save new session: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to save new session: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to save new session.']);
     $db->close();
@@ -151,7 +151,7 @@ $current_sessions_stmt = $db->prepare("
 ");
 
 if (!$current_sessions_stmt) {
-    writeLog("Failed to prepare SELECT on save: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare SELECT on save: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -179,7 +179,7 @@ if ($delete_stmt) {
     $delete_stmt->bindValue(':offset', '-' . ($retentionDays - 1) . ' day', SQLITE3_TEXT);
     $delete_stmt->execute();
 } else {
-    writeLog("Failed to prepare retention delete: " . $db->lastErrorMsg(), "Warn")
+    writeLog("Failed to prepare retention delete: " . $db->lastErrorMsg(), "Warn");
 }
 
 $db->close();

@@ -30,7 +30,7 @@ if (!file_exists($DB_PATH)) {
 
 $db = new SQLite3($DB_PATH);
 if (!$db) {
-    writeLog("DB connection failed on delete. DB_PATH=" . $DB_PATH, "Error")
+    writeLog("DB connection failed on delete. DB_PATH=" . $DB_PATH, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
     exit;
@@ -68,7 +68,7 @@ $current_date = date('Y-m-d');
 
 $stmt = $db->prepare('DELETE FROM gaming_sessions WHERE id = :id');
 if (!$stmt) {
-    writeLog("Failed to prepare delete statement: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare delete statement: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -88,7 +88,7 @@ if ($res) {
         echo json_encode(['status' => 'success', 'message' => 'Session deleted successfully.', 'id' => $id]);
     }
 } else {
-    writeLog("Failed to delete session id=$id: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to delete session id=$id: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to delete session.', 'id' => $id]);
 }

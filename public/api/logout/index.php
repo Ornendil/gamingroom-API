@@ -47,6 +47,6 @@ if (isset($_COOKIE[session_name()])) {
     );
 }
 
-writeLog("Logout completed. Session ID was " . ($sessid ?: 'none'), "Success")
+writeLog("Logout completed. Session ID was " . ($sessid ?: 'none'), "Success");
 
 echo json_encode(['status' => 'success', 'message' => 'Logged out successfully'], JSON_UNESCAPED_UNICODE);

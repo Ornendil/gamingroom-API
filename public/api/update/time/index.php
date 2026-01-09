@@ -117,7 +117,7 @@ $stmt = $db->prepare('
 ');
 
 if (!$stmt) {
-    writeLog("Failed to prepare SQL statement on update/time: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare SQL statement on update/time: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -142,7 +142,7 @@ if ($result) {
         echo json_encode(['status' => 'success', 'id' => $id, 'slot' => $slot, 'computer' => $computer]);
     }
 } else {
-    writeLog("Failed to execute SQL on update/time: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to execute SQL on update/time: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to update session.']);
 }

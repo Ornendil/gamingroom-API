@@ -25,7 +25,7 @@ if (!is_readable($userFile)) {
 // Read the user data from the file and decode it into an associative array
 $userData = json_decode(file_get_contents($userFile), true);
 if (!is_array($userData)) {
-    writeLog("users.json invalid JSON: " . $userFile, "Error")
+    writeLog("users.json invalid JSON: " . $userFile, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Server misconfiguration']);
     exit;
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Optional: log what tenant and username was attempted (not password)
-    writeLog("Login attempt tenant=" . ($TENANT_SLUG ?? 'unknown') . " user=" . $username, "Info")
+    writeLog("Login attempt tenant=" . ($TENANT_SLUG ?? 'unknown') . " user=" . $username, "Info");
 
 
     // Verify if the provided username exists in the user data and the password matches using password_verify.
@@ -77,10 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]
             )
         ) {
-            writeLog("Refresh token cookie set successfully for user: " . $username, "Success")
+            writeLog("Refresh token cookie set successfully for user: " . $username, "Success");
             // writeLog("HTTP Headers: " . print_r(headers_list(), true));
         } else {
-            writeLog("Failed to set refresh token cookie for user: " . $username, "Error")
+            writeLog("Failed to set refresh token cookie for user: " . $username, "Error");
         }
         
 

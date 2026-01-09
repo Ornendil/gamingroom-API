@@ -12,7 +12,7 @@ require_once ROOT . '/auth.php';
 // Connect to tenant SQLite database
 $db = new SQLite3($DB_PATH);
 if (!$db) {
-    writeLog("Database connection failed on /api/data/. DB_PATH=" . $DB_PATH, "Error")
+    writeLog("Database connection failed on /api/data/. DB_PATH=" . $DB_PATH, "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed']);
     exit;
@@ -55,7 +55,7 @@ $query .= ' ORDER BY computer, time_slot';
 // Prepare + bind
 $stmt = $db->prepare($query);
 if (!$stmt) {
-    writeLog("Failed to prepare SQL on /api/data/: " . $db->lastErrorMsg(), "Error")
+    writeLog("Failed to prepare SQL on /api/data/: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to prepare SQL statement']);
     $db->close();
@@ -68,7 +68,7 @@ foreach ($params as $key => [$val, $type]) {
 
 $results = $stmt->execute();
 if (!$results) {
-    writeLog("Query failed on /api/data/: " . $db->lastErrorMsg(), "Error")
+    writeLog("Query failed on /api/data/: " . $db->lastErrorMsg(), "Error");
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Query failed']);
     $db->close();
