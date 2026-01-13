@@ -69,11 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tokens['refreshToken'],   // Cookie value
                 [
                     'expires' => time() + 604800,   // Expires in 1 week
-                    'path' => '/',                  // Available throughout the domain
-                    // 'domain' => 'localhost',        // Explicitly set the domain to 'localhost'
-                    'secure' => true,               // Only send over HTTPS
-                    'httponly' => true,             // Not accessible via JavaScript
-                    'samesite' => 'Strict'          // Prevents sending with cross-site requests
+                    ...$cookieDefaults,
                 ]
             )
         ) {

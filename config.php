@@ -5,16 +5,21 @@ define('ROOT', __DIR__); // This will hold the absolute path to the `gamingroom-
 
 require_once ROOT . '/bootstrap.php';
 
+$cookieDefaults = [
+    'path'     => '/',              // Available throughout the domain
+    // 'domain' => 'localhost',        // Explicitly set the domain to 'localhost'
+    'secure'   => true,             // Only send over HTTPS
+    'httponly' => true,             // Not accessible via JavaScript
+    'samesite' => 'Strict',         // Prevents sending with cross-site requests
+];
+
 // CSRF Session config (once, globally)
 session_save_path(ROOT . '/tmp');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
         'lifetime' => 3600 * 24 * 7,
-        'path' => '/',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'Strict'
+        ...$cookieDefaults,
     ]);
     session_start();
 }

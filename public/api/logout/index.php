@@ -16,10 +16,7 @@ setcookie(
     "",
     [
         'expires'  => time() - 3600,
-        'path'     => '/',
-        'secure'   => true,
-        'httponly' => true,
-        'samesite' => 'Strict'
+        ...$cookieDefaults,
         // Do NOT set 'domain' unless you set it when creating the cookie
     ]
 );
@@ -39,10 +36,7 @@ if (isset($_COOKIE[session_name()])) {
         "",
         [
             'expires'  => time() - 3600,
-            'path'     => '/',
-            'secure'   => true,
-            'httponly' => true,
-            'samesite' => 'Strict'
+            ...$cookieDefaults,
         ]
     );
 }
