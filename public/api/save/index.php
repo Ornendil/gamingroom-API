@@ -142,6 +142,19 @@ if (!$res) {
     exit;
 }
 
+$newId = $db->lastInsertRowID();
+
+$new_session_stmt = $db->prepare("SELECT * FROM gaming_sessions WHERE id = :id");
+$newSession = null;
+
+if ($new_session_stmt) {
+    $new_session_stmt->bindValue(':id', $newId, SQLITE3_INTEGER);
+    $nr = $new_session_stmt->execute();
+    if ($nr) {
+        $newSession = $nr->fetchArray(SQLITE3_ASSOC) ?: null;
+    }
+}
+
 // Fetch sessions for today
 $current_sessions_stmt = $db->prepare("
     SELECT *
@@ -184,4 +197,4 @@ if ($delete_stmt) {
 
 $db->close();
 
-echo json_encode(['status' => 'success', 'sessions' => $sessions], JSON_UNESCAPED_UNICODE);
+echo json_encode(['status' => 'success', 'session' => $newSession, 'sessions' => $sessions], JSON_UNESCAPED_UNICODE);
