@@ -7,8 +7,8 @@ require_once __DIR__ . '/../../../config.php';
 require_once ROOT . '/logging.php';
 require_once ROOT . '/apiHeaders.php';
 require_once ROOT . '/rateLimit.php';
-require_once ROOT . '/csrf/validate.php';
-require_once ROOT . '/auth.php';
+// require_once ROOT . '/csrf/validate.php';
+// require_once ROOT . '/auth.php';
 
 // Clear refresh token cookie (match original attributes!)
 setcookie(
