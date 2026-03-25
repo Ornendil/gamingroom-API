@@ -25,7 +25,7 @@ $tenantSlug = $parts[0] ?? '';
 
 // Fallbacks (dev / safety)
 if ($tenantSlug === '' || $tenantSlug === 'localhost') {
-    $tenantSlug = 'biblioteket';
+    $tenantSlug = 'testbase';
 }
 
 // Whitelist slug characters
