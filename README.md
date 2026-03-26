@@ -10,6 +10,10 @@ This API is intentionally not a booking system, but a *same-day queue and displa
 
 ---
 
+## Frontends
+
+This is made to be used with [Ornendil/gamingroom-admin](https://github.com/Ornendil/gamingroom-admin) for administering the queue and [Ornendil/gamingroom-display](https://github.com/Ornendil/gamingroom-display) for displaying it in the gaming room
+
 ## Core concepts
 
 ### Tenants
