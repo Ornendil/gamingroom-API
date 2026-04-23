@@ -9,6 +9,9 @@ require_once ROOT . '/logging.php';
 
 // Import necessary headers, likely used for setting up API response headers like Content-Type or CORS.
 require_once ROOT . '/apiHeaders.php';
+
+require_once ROOT . '/rateLimit.php';
+
 require_once ROOT . '/jwt/generate.php'; // Include the JWT generation script
 
 // Define the path to the users data file.

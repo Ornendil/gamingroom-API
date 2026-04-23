@@ -95,7 +95,7 @@ while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
         'fra' => $row['fra'],
         'til' => $row['til'],
         'navn' => $row['navn'],
-        'lnr' => $row['lnr'],
+        // 'lnr' => $row['lnr'],
         'last_updated' => $row['last_updated'],
     ];
     if (++$count >= $maxEntries) break;
